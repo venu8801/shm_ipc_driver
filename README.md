@@ -1,0 +1,2 @@
+This is a kernel module for shared memory creation between user-space and kernel space
+this driver creates a memory which can be mapped to the process's address space and allows IPC between two processes.
