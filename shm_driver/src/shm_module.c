@@ -13,7 +13,7 @@
 devInfo shm_drv_ctxt = {
     .dev_num = 0,
     .dev_minor_start = DEVICE_MINOR_BEGIN,
-    .num_devices = DEVICES_NUM,
+    .num_devs = DEVICES_NUM,
 };
 /* shm_drv_ops routines */
 struct file_operations shm_fops = {
@@ -56,7 +56,7 @@ static int __init shm_init(void) {
         printk(KERN_INFO "alloc_chrdev_region failed ret: %d\n", ret);
         goto exit;
     }
-    printk(KERN_INFO,
+    printk(KERN_INFO
            "char dev allocation successful Major: %d - Minor begin: %d - num "
            "devices: %d\n",
            MAJOR(shm_drv_ctxt.dev_num), MINOR(shm_drv_ctxt.dev_num), shm_drv_ctxt.num_devs);
@@ -64,7 +64,7 @@ static int __init shm_init(void) {
     // initialize cdev
     cdev_init(&shm_drv_ctxt.shm_cdev, &shm_fops);
 
-    ret = cdev_add(&shm_drv_ctxt.shm_cdev, shrm_drv_ctxt.dev_num, shm_drv_ctxt.num_devs);
+    ret = cdev_add(&shm_drv_ctxt.shm_cdev, shm_drv_ctxt.dev_num, shm_drv_ctxt.num_devs);
     if (ret) {
         printk(KERN_INFO "cdev_add failed ret: %d\n", ret);
         goto unregister_chrdev;
