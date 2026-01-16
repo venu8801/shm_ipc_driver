@@ -10,11 +10,13 @@
 #include <shm_error.h>
 #include <shm_utils.h>
 
-devInfo shm_drv_ctxt = {
-    .dev_num = 0,
-    .dev_minor_start = DEVICE_MINOR_BEGIN,
-    .num_devs = DEVICES_NUM,
-};
+/* global driver context */
+drv_ctx dctx = {
+    .dev_minor_start = DEVICE_MINOR_BEGIN;
+    .num_devs = DEVICES_NUM;
+    .shm_dev_cls = SHM_DRV_CLS_NAME;
+}
+
 /* shm_drv_ops routines */
 struct file_operations shm_fops = {
     .open = shm_drv_open,
@@ -51,7 +53,17 @@ long shm_drv_ioctl(struct file *f_object, unsigned int shm_cmd_id, unsigned long
 }
 static int __init shm_init(void) {
     printk(KERN_INFO "shm init triggered\n");
-    int ret = alloc_chrdev_region(&shm_drv_ctxt.dev_num, shm_drv_ctxt.dev_minor_start, shm_drv_ctxt.num_devs, DRV_NAME);
+    int ret = EOK;
+    /* allocate dev ctx memory */
+    dctx.dv_ctx = (devInfo *) kmalloc(sizeof(devInfo) * dctx.num_devs, GFP_KERNEL);
+    if (!dctx.dv_ctx) {
+        /* kmalloc error  handle it */
+        printk(KERN_ERR "failed to allocate memory for device context exiting");
+        ret = -ENOMEM;
+        goto exit;
+    }
+
+    ret = alloc_chrdev_region(&dctx.dev_num, dctx.dev_minor_start, dctx.num_devs, DRV_NAME);
     if (ret) {
         printk(KERN_INFO "alloc_chrdev_region failed ret: %d\n", ret);
         goto exit;
@@ -59,28 +71,40 @@ static int __init shm_init(void) {
     printk(KERN_INFO
            "char dev allocation successful Major: %d - Minor begin: %d - num "
            "devices: %d\n",
-           MAJOR(shm_drv_ctxt.dev_num), MINOR(shm_drv_ctxt.dev_num), shm_drv_ctxt.num_devs);
+           MAJOR(dctx.dev_num), MINOR(dctx.dev_num), dctx.num_devs);
 
     // initialize cdev
-    cdev_init(&shm_drv_ctxt.shm_cdev, &shm_fops);
+    cdev_init(&dctx.shm_cdev, &shm_fops);
 
-    ret = cdev_add(&shm_drv_ctxt.shm_cdev, shm_drv_ctxt.dev_num, shm_drv_ctxt.num_devs);
+    ret = cdev_add(&dctx.shm_cdev, dctx.dev_num, dctx.num_devs);
     if (ret) {
         printk(KERN_INFO "cdev_add failed ret: %d\n", ret);
         goto unregister_chrdev;
     }
 
-exit: 
+    //create device file and class
+    dctx.shm_dev_cls = class_create(SHM_DRV_CLS_NAME);
+    if (IS_ERR(dctx.shm_dev_cls)) {
+        printk(KERN_ERR "failed to create shm drv class");
+        goto unregister_chrdev;
+    }
+
+    // create only one device for now
+    device_create(dctx.shm_dev_cls, NULL, /* no parent dev*/
+                  dctx.dev_num, NULL, DEV_NAME);
+    printk(KERN_INFO "device file created: %s\n", DEV_NAME);
+
+exit:
     return ret;
 unregister_chrdev:
-    unregister_chrdev_region(shm_drv_ctxt.dev_num, shm_drv_ctxt.num_devs);
+    unregister_chrdev_region(dctx.dev_num, dctx.num_devs);
     return ret;
 }
 
 void __exit shm_deinit(void) {
     printk(KERN_INFO "shm de-init triggered\n");
-    unregister_chrdev_region(shm_drv_ctxt.dev_num, shm_drv_ctxt.num_devs);
-    cdev_del(&shm_drv_ctxt.shm_cdev);
+    unregister_chrdev_region(dctx.dev_num, dctx.num_devs);
+    cdev_del(&dctx.shm_cdev);
     return;
 }
 
