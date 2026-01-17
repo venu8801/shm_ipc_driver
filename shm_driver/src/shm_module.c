@@ -28,43 +28,43 @@ struct file_operations shm_fops = {
 
 int shm_drv_open(struct inode *filenode, struct file *f_object)
 {
-    printk(KERN_INFO "Shm driver file opened\n");
+    printk(KERN_INFO LOG_TAG "Shm driver file opened\n");
     return SHM_SUCCESS;
 }
 
 ssize_t shm_drv_read(struct file *f_object, char __user *usr_buff, size_t usr_bsize, loff_t *usr_ofst)
 {
-    printk(KERN_INFO "Shm driver read triggered");
+    printk(KERN_INFO LOG_TAG "Shm driver read triggered");
     return SHM_SUCCESS;
 }
 
 ssize_t shm_drv_write(struct file *f_object, const char __user *usr_buff, size_t usr_bsize, loff_t *usr_ofst)
 {
-    printk(KERN_INFO "Shm driver write triggered\n");
+    printk(KERN_INFO LOG_TAG "Shm driver write triggered\n");
     return SHM_SUCCESS;
 }
 
 int shm_drv_release(struct inode *file_inode, struct file *f_object)
 {
-    printk(KERN_INFO "Shm driver relased\n");
+    printk(KERN_INFO LOG_TAG "Shm driver relased\n");
     return SHM_SUCCESS;
 }
 
 long shm_drv_ioctl(struct file *f_object, unsigned int shm_cmd_id, unsigned long shm_arg)
 {
-    printk(KERN_INFO "Shm driver IOCTL cmd-id: [%d] \n", shm_cmd_id);
+    printk(KERN_INFO LOG_TAG "Shm driver IOCTL cmd-id: [%d] \n", shm_cmd_id);
     return SHM_SUCCESS;
 }
 static int __init shm_init(void)
 {
-    printk(KERN_INFO "shm init triggered\n");
+    printk(KERN_INFO LOG_TAG "shm init triggered\n");
     int ret = SHM_SUCCESS;
     /* allocate per device ctx memory in kernel heap */
     shm_drv_ctx.dv_ctx = (devInfo *)kmalloc(sizeof(devInfo) * shm_drv_ctx.num_devs, GFP_KERNEL);
     if (!shm_drv_ctx.dv_ctx)
     {
         /* kmalloc error handle it */
-        printk(KERN_ERR "failed to allocate memory for device context exiting ..");
+        printk(KERN_ERR LOG_TAG "failed to allocate memory for device context exiting ..");
         ret = -ENOMEM;
         goto exit;
     }
@@ -72,10 +72,10 @@ static int __init shm_init(void)
     ret = alloc_chrdev_region(&shm_drv_ctx.dev_num, shm_drv_ctx.dev_minor_start, shm_drv_ctx.num_devs, DRV_NAME);
     if (ret)
     {
-        printk(KERN_INFO "alloc_chrdev_region failed ret: %d\n", ret);
+        printk(KERN_INFO LOG_TAG "alloc_chrdev_region failed ret: %d\n", ret);
         goto exit;
     }
-    printk(KERN_INFO
+    printk(KERN_INFO LOG_TAG
            "char dev allocation successful Major: %d - Minor begin: %d - num "
            "devices: %d\n",
            MAJOR(shm_drv_ctx.dev_num), MINOR(shm_drv_ctx.dev_num), shm_drv_ctx.num_devs);
@@ -83,7 +83,7 @@ static int __init shm_init(void)
     shm_drv_ctx.shm_dev_cls = class_create(SHM_DRV_CLS_NAME);
     if (IS_ERR(shm_drv_ctx.shm_dev_cls))
     {
-        printk(KERN_ERR "failed to create shm drv class");
+        printk(KERN_ERR LOG_TAG "failed to create shm drv class");
         goto unregister_chrdev;
     }
     // initialize cdev for per device
@@ -97,7 +97,7 @@ static int __init shm_init(void)
         ret = cdev_add(&shm_drv_ctx.dv_ctx[i].shm_cdev, curr_dev_num, 1);
         if (ret)
         {
-            printk(KERN_INFO "cdev_add failed ret: %d\n", ret);
+            printk(KERN_INFO LOG_TAG "cdev_add failed ret: %d\n", ret);
             goto unregister_chrdev;
         }
         /* create a device node for each device */
@@ -106,7 +106,7 @@ static int __init shm_init(void)
                       curr_dev_num,
                       NULL,
                       DEV_NAME "%d", i); /* dev_name[0 ... n]*/
-        printk(KERN_INFO "device file created: %s\n", DEV_NAME);
+        printk(KERN_INFO LOG_TAG "device file created: %s\n", DEV_NAME);
     }
 
 exit:
@@ -118,7 +118,7 @@ unregister_chrdev:
 
 void __exit shm_deinit(void)
 {
-    printk(KERN_INFO "shm de-init triggered\n");
+    printk(KERN_INFO LOG_TAG "shm de-init triggered\n");
     // de-register the devices
     for (int8_t i = 0; i < shm_drv_ctx.num_devs; i++)
     {
@@ -137,4 +137,4 @@ module_exit(shm_deinit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Venu Gopal Atchyutanna <venu.ark.prasad@gmail.com>");
-MODULE_VERSION("0.1");
+MODULE_VERSION("0.0.1");
